@@ -1,15 +1,18 @@
 package com.rima.expenseflow.service;
 
+import com.rima.expenseflow.exception.DuplicateResourceException;
+import com.rima.expenseflow.exception.ResourceNotFoundException;
 import com.rima.expenseflow.model.User;
 import com.rima.expenseflow.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor  // Lombok: generates constructor for final fields
+@RequiredArgsConstructor
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
@@ -18,16 +21,60 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public Optional<User> getUserById(Long id) {
-        return userRepository.findById(id);
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
     }
 
     public User createUser(User user) {
-        // TODO: Add password hashing later
+        // Check if username already exists
+        if (userRepository.existsByUsername(user.getUsername())) {
+            throw new DuplicateResourceException("User", "username", user.getUsername());
+        }
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new DuplicateResourceException("User", "email", user.getEmail());
+        }
+
+        // TODO: Hash password before saving (we'll do this in Phase 4)
         return userRepository.save(user);
     }
 
-    public Optional<User> getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public User updateUser(Long id, User userDetails) {
+        User user = getUserById(id);
+
+        // Check if new username is taken by another user
+        if (!user.getUsername().equals(userDetails.getUsername()) &&
+                userRepository.existsByUsername(userDetails.getUsername())) {
+            throw new DuplicateResourceException("User", "username", userDetails.getUsername());
+        }
+
+        // Check if new email is taken by another user
+        if (!user.getEmail().equals(userDetails.getEmail()) &&
+                userRepository.existsByEmail(userDetails.getEmail())) {
+            throw new DuplicateResourceException("User", "email", userDetails.getEmail());
+        }
+
+        user.setUsername(userDetails.getUsername());
+        user.setEmail(userDetails.getEmail());
+        user.setFirstName(userDetails.getFirstName());
+        user.setLastName(userDetails.getLastName());
+
+        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
+            user.setPassword(userDetails.getPassword());
+        }
+
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        User user = getUserById(id);
+        userRepository.delete(user);
+    }
+
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
     }
 }
