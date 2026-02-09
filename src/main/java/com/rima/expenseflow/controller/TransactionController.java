@@ -3,6 +3,7 @@ package com.rima.expenseflow.controller;
 import com.rima.expenseflow.dto.MonthlySummaryResponse;
 import com.rima.expenseflow.dto.TransactionRequest;
 import com.rima.expenseflow.dto.TransactionResponse;
+import com.rima.expenseflow.model.User;
 import com.rima.expenseflow.model.enums.Category;
 import com.rima.expenseflow.model.enums.TransactionType;
 import com.rima.expenseflow.service.TransactionService;
@@ -15,12 +16,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
 
 @RestController
-@RequestMapping("/api/users/{userId}/transactions")
+@RequestMapping("/api/transactions")  // CHANGED: Removed /users/{userId}
 @RequiredArgsConstructor
 public class TransactionController {
 
@@ -28,16 +30,16 @@ public class TransactionController {
 
     @PostMapping
     public ResponseEntity<TransactionResponse> createTransaction(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @Valid @RequestBody TransactionRequest request) {
 
-        TransactionResponse created = transactionService.createTransaction(userId, request);
+        TransactionResponse created = transactionService.createTransaction(currentUser.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping
     public ResponseEntity<Page<TransactionResponse>> getTransactions(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) Category category,
             @RequestParam(defaultValue = "0") int page,
@@ -47,53 +49,52 @@ public class TransactionController {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         Page<TransactionResponse> transactions = transactionService
-                .getTransactions(userId, type, category, pageable);
+                .getTransactions(currentUser.getId(), type, category, pageable);
 
         return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/{transactionId}")
     public ResponseEntity<TransactionResponse> getTransactionById(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @PathVariable Long transactionId) {
 
         TransactionResponse transaction = transactionService
-                .getTransactionById(userId, transactionId);
+                .getTransactionById(currentUser.getId(), transactionId);
         return ResponseEntity.ok(transaction);
     }
 
     @PutMapping("/{transactionId}")
     public ResponseEntity<TransactionResponse> updateTransaction(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @PathVariable Long transactionId,
             @Valid @RequestBody TransactionRequest request) {
 
         TransactionResponse updated = transactionService
-                .updateTransaction(userId, transactionId, request);
+                .updateTransaction(currentUser.getId(), transactionId, request);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<Void> deleteTransaction(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @PathVariable Long transactionId) {
 
-        transactionService.deleteTransaction(userId, transactionId);
+        transactionService.deleteTransaction(currentUser.getId(), transactionId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/summary")
     public ResponseEntity<MonthlySummaryResponse> getMonthlySummary(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser,  // Get from JWT
             @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM")
             YearMonth month) {
 
-        // Default to current month if not specified
         YearMonth targetMonth = (month != null) ? month : YearMonth.now();
 
         MonthlySummaryResponse summary = transactionService
-                .getMonthlySummary(userId, targetMonth);
+                .getMonthlySummary(currentUser.getId(), targetMonth);
         return ResponseEntity.ok(summary);
     }
 }

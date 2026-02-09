@@ -5,6 +5,7 @@ import com.rima.expenseflow.exception.ResourceNotFoundException;
 import com.rima.expenseflow.model.User;
 import com.rima.expenseflow.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -37,7 +39,8 @@ public class UserService {
             throw new DuplicateResourceException("User", "email", user.getEmail());
         }
 
-        // TODO: Hash password before saving (we'll do this in Phase 4)
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
         return userRepository.save(user);
     }
 
@@ -62,7 +65,7 @@ public class UserService {
         user.setLastName(userDetails.getLastName());
 
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(userDetails.getPassword());
+            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
         }
 
         return userRepository.save(user);
