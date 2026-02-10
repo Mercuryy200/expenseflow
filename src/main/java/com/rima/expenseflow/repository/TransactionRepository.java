@@ -14,11 +14,32 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    // Find all transactions for a user
+    // Find all transactions for a user by userId
+    Page<Transaction> findByUserId(Long userId, Pageable pageable);
+
+    // Find by userId and type
+    Page<Transaction> findByUserIdAndType(Long userId, TransactionType type, Pageable pageable);
+
+    // Find by userId and category
+    Page<Transaction> findByUserIdAndCategory(Long userId, Category category, Pageable pageable);
+
+    // Find by userId, type, and category
+    Page<Transaction> findByUserIdAndTypeAndCategory(
+            Long userId,
+            TransactionType type,
+            Category category,
+            Pageable pageable
+    );
+
+    // Find single transaction by id and userId (for authorization)
+    Optional<Transaction> findByIdAndUserId(Long id, Long userId);
+
+    // Find all transactions for a user (original method - keep for backward compatibility)
     Page<Transaction> findByUser(User user, Pageable pageable);
 
     // Find by user and type
